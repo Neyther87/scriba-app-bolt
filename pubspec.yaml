@@ -1,0 +1,104 @@
+name: scribaverse
+description: Ecosistema completo di lettura e pubblicazione multipiattaforma
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.1
+  riverpod: ^2.4.9
+  flutter_riverpod: ^2.4.9
+  
+  # Navigation
+  go_router: ^12.1.3
+  
+  # UI Components
+  cupertino_icons: ^1.0.2
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.0
+  flutter_staggered_grid_view: ^0.7.0
+  
+  # Authentication & Security
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  local_auth: ^2.1.7
+  crypto: ^3.0.3
+  
+  # Storage & Database
+  sqflite: ^2.3.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.2.2
+  
+  # Network & API
+  dio: ^5.4.0
+  retrofit: ^4.0.3
+  json_annotation: ^4.8.1
+  
+  # File Management
+  file_picker: ^6.1.1
+  path_provider: ^2.1.1
+  permission_handler: ^11.1.0
+  
+  # Media & Reading
+  flutter_tts: ^3.8.5
+  epub_view: ^3.0.0
+  flutter_html: ^3.0.0-beta.2
+  pdf_render: ^1.4.3
+  audioplayers: ^5.2.1
+  
+  # Payment
+  stripe_payment: ^1.0.8
+  
+  # Analytics & Monitoring
+  firebase_analytics: ^10.7.4
+  firebase_crashlytics: ^3.4.8
+  
+  # Utility
+  intl: ^0.18.1
+  url_launcher: ^6.2.2
+  share_plus: ^7.2.1
+  connectivity_plus: ^5.0.2
+  device_info_plus: ^9.1.1
+  package_info_plus: ^4.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  
+  # Code Generation
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+  retrofit_generator: ^8.0.4
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
+  generate: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/fonts/
+    
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700

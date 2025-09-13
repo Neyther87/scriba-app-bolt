@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScribaVerse Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-purple { color: #5E2D91; }
+        .bg-custom-purple { background-color: #5E2D91; }
+        .custom-gold { color: #C69C6D; }
+        .bg-custom-gold { background-color: #C69C6D; }
+        .custom-blue { color: #0B3A6F; }
+        .bg-custom-blue { background-color: #0B3A6F; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #5E2D91; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3D1B5F; }
+        
+        /* Transitions */
+        .transition-all-300 { transition: all 0.3s ease; }
+        
+        /* Sidebar animation */
+        .sidebar-enter { transform: translateX(-100%); }
+        .sidebar-enter-active { transform: translateX(0); transition: transform 0.3s ease; }
+        
+        /* Mobile responsive table */
+        @media (max-width: 768px) {
+            .table-mobile { display: block; overflow-x: auto; white-space: nowrap; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans antialiased" x-data="adminApp()">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-custom-purple z-50 flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin mb-4 mx-auto"></div>
+            <h2 class="text-white text-xl font-semibold">Caricamento...</h2>
+            <p class="text-white opacity-80 mt-2">ScribaVerse Admin Panel</p>
+        </div>
+    </div>
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="bg-white shadow-lg w-64 flex-shrink-0 hidden lg:block" :class="{ 'block': sidebarOpen }" x-show="sidebarOpen" x-transition:enter="transition-all-300" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0">
+            <div class="flex items-center justify-center h-16 border-b border-gray-200">
+                <div class="flex items-center">
+                    <img src="/assets/images/sv-logo-only-nobg.png" alt="ScribaVerse" class="h-10 w-10 mr-3">
+                    <h1 class="text-xl font-bold custom-purple">ScribaVerse</h1>
+                </div>
+            </div>
+            <nav class="mt-8">
+                <div class="px-4">
+                    <template x-for="item in menuItems" :key="item.id">
+                        <a :href="item.href" 
+                           @click.prevent="setActiveView(item.view)"
+                           class="flex items-center px-4 py-3 text-gray-700 rounded-lg mb-2 hover:bg-purple-50 hover:text-purple-700 transition-all-300"
+                           :class="{ 'bg-custom-purple text-white': activeView === item.view }">
+                            <i :class="item.icon" class="mr-3 text-lg"></i>
+                            <span x-text="item.label"></span>
+                            <span x-show="item.badge" 
+                                  x-text="item.badge" 
+                                  class="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full"></span>
+                        </a>
+                    </template>
+                </div>
+                
+                <!-- User Info -->
+                <div class="absolute bottom-0 w-64 p-4 border-t border-gray-200">
+                    <div class="flex items-center">
+                        <img src="https://via.placeholder.com/40" alt="Admin" class="w-10 h-10 rounded-full mr-3">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700" x-text="adminUser.name"></p>
+                            <p class="text-xs text-gray-500" x-text="adminUser.role"></p>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Mobile sidebar overlay -->
+        <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-40 lg:hidden bg-black bg-opacity-50" x-transition.opacity></div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden mr-4 text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <h2 class="text-2xl font-semibold text-gray-800" x-text="currentPageTitle"></h2>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <!-- Notifications -->
+                        <div class="relative">
+                            <button class="text-gray-600 hover:text-gray-800 relative">
+                                <i class="fas fa-bell text-xl"></i>
+                                <span x-show="notifications.length > 0" 
+                                      class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+                                      x-text="notifications.length"></span>
+                            </button>
+                        </div>
+                        
+                        <!-- Quick Stats -->
+                        <div class="hidden md:flex items-center space-x-6 text-sm">
+                            <div class="text-center">
+                                <p class="text-gray-500">Utenti Attivi</p>
+                                <p class="font-semibold text-green-600" x-text="stats.activeUsers"></p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-gray-500">Ricavi Oggi</p>
+                                <p class="font-semibold custom-gold" x-text="'€' + stats.todayRevenue"></p>
+                            </div>
+                        </div>
+                        
+                        <!-- Profile Menu -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" class="flex items-center text-gray-600 hover:text-gray-800">
+                                <img src="https://via.placeholder.com/32" alt="Profile" class="w-8 h-8 rounded-full mr-2">
+                                <i class="fas fa-chevron-down text-sm"></i>
+                            </button>
+                            <div x-show="open" @click.outside="open = false" 
+                                 x-transition:enter="transition-all-300" 
+                                 x-transition:enter-start="opacity-0 scale-95" 
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                                <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Il Mio Profilo</a>
+                                <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Impostazioni</a>
+                                <hr class="my-2">
+                                <a href="#" class="block px-4 py-2 text-red-600 hover:bg-red-50" @click="logout()">Logout</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
+                <!-- Dashboard View -->
+                <div x-show="activeView === 'dashboard'" class="space-y-6">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <template x-for="card in dashboardStats" :key="card.id">
+                            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-all-300">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-gray-600 text-sm font-medium" x-text="card.title"></p>
+                                        <p class="text-2xl font-bold mt-2" 
+                                           :class="card.color" 
+                                           x-text="card.value"></p>
+                                        <div class="flex items-center mt-2">
+                                            <span :class="card.trend.color + ' text-xs font-medium'"
+                                                  x-text="card.trend.value"></span>
+                                            <span class="text-gray-500 text-xs ml-2" x-text="card.trend.period"></span>
+                                        </div>
+                                    </div>
+                                    <div :class="card.iconBg" class="p-3 rounded-lg">
+                                        <i :class="card.icon + ' text-white text-xl'"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Revenue Chart -->
+                        <div class="bg-white rounded-xl shadow-sm p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Ricavi Ultimi 30 Giorni</h3>
+                            <canvas id="revenueChart" width="400" height="200"></canvas>
+                        </div>
+                        
+                        <!-- User Growth Chart -->
+                        <div class="bg-white rounded-xl shadow-sm p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Crescita Utenti</h3>
+                            <canvas id="userGrowthChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Attività Recenti</h3>
+                        <div class="space-y-4">
+                            <template x-for="activity in recentActivities" :key="activity.id">
+                                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                                    <div :class="activity.iconBg" class="p-2 rounded-full mr-4">
+                                        <i :class="activity.icon + ' text-white text-sm'"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-gray-800 font-medium" x-text="activity.title"></p>
+                                        <p class="text-gray-600 text-sm" x-text="activity.description"></p>
+                                    </div>
+                                    <span class="text-gray-500 text-sm" x-text="activity.time"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Management View -->
+                <div x-show="activeView === 'users'" class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Gestione Utenti</h2>
+                        <div class="flex space-x-3">
+                            <button class="bg-custom-purple text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-all-300">
+                                <i class="fas fa-plus mr-2"></i>Aggiungi Utente
+                            </button>
+                            <button class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all-300">
+                                <i class="fas fa-download mr-2"></i>Esporta
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input type="text" placeholder="Cerca utenti..." 
+                                   class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            <select class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                <option>Tutti i Tipi</option>
+                                <option>Reader Free</option>
+                                <option>Reader PRO</option>
+                                <option>Creator PRO</option>
+                            </select>
+                            <select class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                <option>Tutti gli Stati</option>
+                                <option>Attivi</option>
+                                <option>Inattivi</option>
+                                <option>Sospesi</option>
+                            </select>
+                            <button class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-all-300">
+                                <i class="fas fa-search mr-2"></i>Filtra
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Users Table -->
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <table class="min-w-full table-mobile">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utente</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stato</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registrazione</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <template x-for="user in users" :key="user.id">
+                                    <tr class="hover:bg-gray-50 transition-all-300">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <img :src="user.avatar" class="h-10 w-10 rounded-full mr-3">
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-900" x-text="user.name"></p>
+                                                    <p class="text-sm text-gray-500" x-text="user.email"></p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span :class="user.typeColor" 
+                                                  class="px-3 py-1 rounded-full text-xs font-medium"
+                                                  x-text="user.type"></span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span :class="user.statusColor" 
+                                                  class="px-3 py-1 rounded-full text-xs font-medium"
+                                                  x-text="user.status"></span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="user.joinDate"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <div class="flex space-x-2">
+                                                <button class="text-blue-600 hover:text-blue-900 transition-all-300">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="text-yellow-600 hover:text-yellow-900 transition-all-300">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="text-red-600 hover:text-red-900 transition-all-300">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        
+                        <!-- Pagination -->
+                        <div class="bg-white px-6 py-4 border-t border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm text-gray-700">
+                                    Mostrando <span class="font-medium">1</span> - <span class="font-medium">10</span> di <span class="font-medium">247</span> risultati
+                                </p>
+                                <div class="flex space-x-2">
+                                    <button class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Precedente</button>
+                                    <button class="px-3 py-2 text-sm font-medium text-white bg-custom-purple border border-transparent rounded-lg hover:bg-purple-700">1</button>
+                                    <button class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">2</button>
+                                    <button class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">3</button>
+                                    <button class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Successivo</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Management View -->
+                <div x-show="activeView === 'content'" class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Gestione Contenuti</h2>
+                        <div class="flex space-x-3">
+                            <button class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-all-300">
+                                <i class="fas fa-clock mr-2"></i>In Revisione (<span x-text="pendingContent"></span>)
+                            </button>
+                            <button class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all-300">
+                                <i class="fas fa-download mr-2"></i>Esporta Report
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Content moderation queue would go here -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <p class="text-gray-600">Interfaccia di gestione contenuti in sviluppo...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function adminApp() {
+            return {
+                sidebarOpen: false,
+                activeView: 'dashboard',
+                
+                adminUser: {
+                    name: 'Marco Rossi',
+                    role: 'Super Admin'
+                },
+                
+                notifications: [
+                    { id: 1, title: 'Nuovo contenuto da moderare' },
+                    { id: 2, title: 'Pagamento in sospeso' }
+                ],
+                
+                stats: {
+                    activeUsers: '1,247',
+                    todayRevenue: '2,847.50'
+                },
+                
+                menuItems: [
+                    { id: 1, view: 'dashboard', label: 'Dashboard', icon: 'fas fa-chart-line', href: '#' },
+                    { id: 2, view: 'users', label: 'Utenti', icon: 'fas fa-users', href: '#' },
+                    { id: 3, view: 'content', label: 'Contenuti', icon: 'fas fa-book', href: '#', badge: 5 },
+                    { id: 4, view: 'revenue', label: 'Ricavi', icon: 'fas fa-euro-sign', href: '#' },
+                    { id: 5, view: 'analytics', label: 'Analytics', icon: 'fas fa-chart-bar', href: '#' },
+                    { id: 6, view: 'support', label: 'Supporto', icon: 'fas fa-headset', href: '#' },
+                    { id: 7, view: 'settings', label: 'Impostazioni', icon: 'fas fa-cog', href: '#' }
+                ],
+                
+                dashboardStats: [
+                    {
+                        id: 1,
+                        title: 'Utenti Totali',
+                        value: '12,543',
+                        color: 'custom-purple',
+                        icon: 'fas fa-users',
+                        iconBg: 'bg-custom-purple',
+                        trend: { value: '+12%', color: 'text-green-500', period: 'vs mese scorso' }
+                    },
+                    {
+                        id: 2,
+                        title: 'Ricavi Mensili',
+                        value: '€45,280',
+                        color: 'custom-gold',
+                        icon: 'fas fa-euro-sign',
+                        iconBg: 'bg-custom-gold',
+                        trend: { value: '+8%', color: 'text-green-500', period: 'vs mese scorso' }
+                    },
+                    {
+                        id: 3,
+                        title: 'Libri Pubblicati',
+                        value: '2,847',
+                        color: 'custom-blue',
+                        icon: 'fas fa-book',
+                        iconBg: 'bg-custom-blue',
+                        trend: { value: '+23%', color: 'text-green-500', period: 'vs mese scorso' }
+                    },
+                    {
+                        id: 4,
+                        title: 'Abbonamenti PRO',
+                        value: '8,721',
+                        color: 'text-emerald-600',
+                        icon: 'fas fa-star',
+                        iconBg: 'bg-emerald-500',
+                        trend: { value: '+15%', color: 'text-green-500', period: 'vs mese scorso' }
+                    }
+                ],
+                
+                recentActivities: [
+                    {
+                        id: 1,
+                        title: 'Nuovo libro pubblicato',
+                        description: '"Il Mistero della Villa" di Maria Bianchi',
+                        time: '2 minuti fa',
+                        icon: 'fas fa-book',
+                        iconBg: 'bg-green-500'
+                    },
+                    {
+                        id: 2,
+                        title: 'Nuovo utente PRO',
+                        description: 'Luigi Verdi ha attivato l\'abbonamento PRO',
+                        time: '15 minuti fa',
+                        icon: 'fas fa-star',
+                        iconBg: 'bg-custom-gold'
+                    },
+                    {
+                        id: 3,
+                        title: 'Contenuto segnalato',
+                        description: 'Segnalazione per "Avventure Spaziali"',
+                        time: '1 ora fa',
+                        icon: 'fas fa-flag',
+                        iconBg: 'bg-red-500'
+                    }
+                ],
+                
+                users: [
+                    {
+                        id: 1,
+                        name: 'Maria Rossi',
+                        email: 'maria@email.com',
+                        avatar: 'https://via.placeholder.com/40',
+                        type: 'Creator PRO',
+                        typeColor: 'bg-custom-gold text-white',
+                        status: 'Attivo',
+                        statusColor: 'bg-green-100 text-green-800',
+                        joinDate: '15 Gen 2024'
+                    },
+                    {
+                        id: 2,
+                        name: 'Luigi Bianchi',
+                        email: 'luigi@email.com',
+                        avatar: 'https://via.placeholder.com/40',
+                        type: 'Reader PRO',
+                        typeColor: 'bg-custom-purple text-white',
+                        status: 'Attivo',
+                        statusColor: 'bg-green-100 text-green-800',
+                        joinDate: '12 Gen 2024'
+                    },
+                    {
+                        id: 3,
+                        name: 'Anna Verdi',
+                        email: 'anna@email.com',
+                        avatar: 'https://via.placeholder.com/40',
+                        type: 'Reader Free',
+                        typeColor: 'bg-gray-100 text-gray-800',
+                        status: 'Attivo',
+                        statusColor: 'bg-green-100 text-green-800',
+                        joinDate: '10 Gen 2024'
+                    }
+                ],
+                
+                pendingContent: 5,
+                
+                get currentPageTitle() {
+                    const titles = {
+                        dashboard: 'Dashboard',
+                        users: 'Gestione Utenti',
+                        content: 'Gestione Contenuti',
+                        revenue: 'Gestione Ricavi',
+                        analytics: 'Analytics',
+                        support: 'Supporto Clienti',
+                        settings: 'Impostazioni'
+                    };
+                    return titles[this.activeView] || 'Dashboard';
+                },
+                
+                setActiveView(view) {
+                    this.activeView = view;
+                    this.sidebarOpen = false;
+                },
+                
+                logout() {
+                    alert('Logout effettuato');
+                },
+                
+                init() {
+                    // Hide loading screen
+                    setTimeout(() => {
+                        document.getElementById('loadingScreen').style.display = 'none';
+                    }, 2000);
+                    
+                    // Initialize charts
+                    this.initCharts();
+                },
+                
+                initCharts() {
+                    // Revenue Chart
+                    const revenueCtx = document.getElementById('revenueChart');
+                    if (revenueCtx) {
+                        new Chart(revenueCtx, {
+                            type: 'line',
+                            data: {
+                                labels: ['1 Gen', '5 Gen', '10 Gen', '15 Gen', '20 Gen', '25 Gen', '30 Gen'],
+                                datasets: [{
+                                    label: 'Ricavi (€)',
+                                    data: [1200, 1900, 3000, 5000, 2300, 3200, 4500],
+                                    borderColor: '#5E2D91',
+                                    backgroundColor: 'rgba(94, 45, 145, 0.1)',
+                                    tension: 0.4,
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: 'rgba(0,0,0,0.1)' }
+                                    },
+                                    x: {
+                                        grid: { display: false }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    
+                    // User Growth Chart
+                    const userCtx = document.getElementById('userGrowthChart');
+                    if (userCtx) {
+                        new Chart(userCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
+                                datasets: [{
+                                    label: 'Nuovi Utenti',
+                                    data: [12, 19, 15, 17, 22, 18, 25],
+                                    backgroundColor: '#C69C6D',
+                                    borderRadius: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: 'rgba(0,0,0,0.1)' }
+                                    },
+                                    x: {
+                                        grid: { display: false }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
