@@ -1,0 +1,13 @@
+image:
+  file: .gitpod.Dockerfile
+
+tasks:
+  - init: |
+      flutter --version || true
+    command: |
+      flutter pub get
+      # avvia la preview web sul web-server
+      flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8080
+ports:
+  - port: 8080
+    onOpen: open-preview
