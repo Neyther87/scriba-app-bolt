@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "build": "flutter build web --release",
-    "dev": "PATH=\"/home/gitpod/flutter/bin:$PATH\" flutter run -d web-server --web-port 3000"
+    "dev": "/home/gitpod/flutter/bin/flutter run -d web-server --web-port 3000"
   },
   "devDependencies": {}
 }
