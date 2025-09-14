@@ -1,0 +1,9 @@
+{
+  "name": "scribaverse",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "flutter build web --release",
+    "dev": "flutter run -d web-server --web-port 3000"
+  },
+  "devDependencies": {}
+}
