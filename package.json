@@ -1,9 +1,16 @@
 {
   "name": "scribaverse",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
-    "build": "flutter build web --release",
-    "dev": "flutter run -d web-server --web-port 3000"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "lucide": "^0.263.1"
+  }
 }
